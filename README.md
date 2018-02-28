@@ -1,7 +1,7 @@
 stvmeek
 =======
 
-stvmeek is based on
+stvmeek is based on Roy Ward's Voting System Toolbox [http://prdownloads.sourceforge.net/votesystem/vote-0-4.zip]
 
 
 Building with maven
