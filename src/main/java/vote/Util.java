@@ -21,29 +21,31 @@ import java.math.BigDecimal;
 
 class Util {
 
-    static final BigDecimal one = BigDecimal.valueOf(1);
+    private static final BigDecimal one = BigDecimal.valueOf(1);
 
     public static String toStringIntPadded(int i, int width) {
-        String s= "" + i;
-        while(s.length() < width)
-            s = " " + s;
-        return s;
+        StringBuilder s = new StringBuilder("" + i);
+        while (s.length() < width)
+            s.insert(0, " ");
+        return s.toString();
     }
 
-     public static String toStringBigDecPadded(BigDecimal x, int width, int scale) {
-        String s= "" + forceScale(x, scale);
-        while(s.length() < width)
-            s = " " + s;
-        return s;
+    public static String toStringBigDecPadded(BigDecimal x, int width, int scale) {
+        StringBuilder s = new StringBuilder("" + forceScale(x, scale));
+        while (s.length() < width)
+            s.insert(0, " ");
+        return s.toString();
     }
 
-   public static String toStringPadded(String s, int width) {
-        while(s.length() < width)
-            s += "                                        ";
-        return s.substring(0,width);
+    public static String toStringPadded(String s, int width) {
+        StringBuilder sBuilder = new StringBuilder(s);
+        while (sBuilder.length() < width)
+            sBuilder.append("                                        ");
+        s = sBuilder.toString();
+        return s.substring(0, width);
     }
-    
-    public static BigDecimal forceScale(BigDecimal x, int scale) {
-        return x.divide(one,scale,BigDecimal.ROUND_UP);
+
+    private static BigDecimal forceScale(BigDecimal x, int scale) {
+        return x.divide(one, scale, BigDecimal.ROUND_UP);
     }
 }

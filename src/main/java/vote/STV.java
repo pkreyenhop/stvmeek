@@ -21,36 +21,36 @@ import java.math.BigDecimal;
 
 public class STV {
 
-    static final int ELECTED = 1;
-    static final int HOPEFUL = 2;
-    static final int ELIMINATED = 4;
-    static final int ALMOST = 8;
-    static final BigDecimal billionth = new BigDecimal("0.000000001");
-    static final BigDecimal zero = BigDecimal.valueOf(0);
-    static final BigDecimal one = BigDecimal.valueOf(1);
-    static final BigDecimal quotaErrorMargin = new BigDecimal("0.00001");
-    static final BigDecimal reallyBig = new BigDecimal("1000000000000000000");
-    static final int DP = 9;
-    static final int NUMWIDTH = 15;
-    static final int ROUND_UP = BigDecimal.ROUND_UP;
-    static final int ROUND_DOWN = BigDecimal.ROUND_DOWN;
+    private static final int ELECTED = 1;
+    private static final int HOPEFUL = 2;
+    private static final int ELIMINATED = 4;
+    private static final int ALMOST = 8;
+    private static final BigDecimal billionth = new BigDecimal("0.000000001");
+    private static final BigDecimal zero = BigDecimal.valueOf(0);
+    private static final BigDecimal one = BigDecimal.valueOf(1);
+    private static final BigDecimal quotaErrorMargin = new BigDecimal("0.00001");
+    private static final BigDecimal reallyBig = new BigDecimal("1000000000000000000");
+    private static final int DP = 9;
+    private static final int NUMWIDTH = 15;
+    private static final int ROUND_UP = BigDecimal.ROUND_UP;
+    private static final int ROUND_DOWN = BigDecimal.ROUND_DOWN;
 
-    Table table;
-    int[] candStatus;
-    int[] candRand;
-    int[] ahead;
-    BigDecimal[] candWeight;
-    BigDecimal[] candVote;
-    Status sys;
-    BigDecimal excess;
-    BigDecimal quota;
-    BigDecimal surplus;
-    RandomAS183 rand;
-    boolean changed;
-    
+    private final Table table;
+    private final int[] candStatus;
+    private final int[] candRand;
+    private final int[] ahead;
+    private final BigDecimal[] candWeight;
+    private final BigDecimal[] candVote;
+    private final Status sys;
     // local copies of variables from the table
-    int numCandidates, numVoters;
-    
+    private final int numCandidates;
+    private final int numVoters;
+    private BigDecimal excess;
+    private BigDecimal quota;
+    private BigDecimal surplus;
+    private RandomAS183 rand;
+    private boolean changed;
+
 
     public STV(Table input, Status psys) {
         sys = psys;
@@ -60,38 +60,38 @@ public class STV {
         candStatus = new int[numCandidates];
         candRand = new int[numCandidates];
         ahead = new int[numCandidates];
-        for(int i=0; i<numCandidates; i++)
-            ahead[i] = numCandidates-1;
+        for (int i = 0; i < numCandidates; i++)
+            ahead[i] = numCandidates - 1;
         candWeight = new BigDecimal[numCandidates];
         candVote = new BigDecimal[numCandidates];
-        for(int i=0; i<numCandidates; i++) {
+        for (int i = 0; i < numCandidates; i++) {
             candStatus[i] = HOPEFUL;
             candWeight[i] = one;
         }
         surplus = one;
     }
-    
+
     public void print() {
-    	for(int i=0; i<numCandidates; i++) {
-            sys.printlnOut(Util.toStringPadded(table.getCandidate(i),40) + " "
-                + ((candStatus[i]==ELECTED)?"elected":"not elected"));
+        for (int i = 0; i < numCandidates; i++) {
+            sys.printlnOut(Util.toStringPadded(table.getCandidate(i), 40) + " "
+                    + ((candStatus[i] == ELECTED) ? "elected" : "not elected"));
         }
     }
 
     public void vote(int seats) {
-        rand = new RandomAS183(numCandidates+5, seats, (numVoters+1000*(numVoters%10)) % 30323);
+        rand = new RandomAS183(numCandidates + 5, seats, (numVoters + 1000 * (numVoters % 10)) % 30323);
         rand.random();
         rand.random();
         rand.random();
         rand.random();
-        for(int i=0; i<numCandidates; i++) {
+        for (int i = 0; i < numCandidates; i++) {
             boolean repeated = true;
             int n = 0;
-                while(repeated) {
+            while (repeated) {
                 repeated = false;
                 n = rand.random();
-                for(int j=0; ((j<i) && !repeated) ; j++) {
-                    if(n == candRand[i]) {
+                for (int j = 0; ((j < i) && !repeated); j++) {
+                    if (n == candRand[i]) {
                         sys.printlnDebug("Repeated random number");
                         repeated = true;
                     }
@@ -99,23 +99,23 @@ public class STV {
             }
             candRand[i] = n;
         }
-        
-        if(count(ELECTED+HOPEFUL) <= seats) {
+
+        if (count(ELECTED + HOPEFUL) <= seats) {
             sys.printlnDebug("All candidates elected");
-            changeState(HOPEFUL,ELECTED);
+            changeState(HOPEFUL, ELECTED);
             return;
         }
-        if(seats <= 0) {
-            changeState(HOPEFUL,ELIMINATED);
+        if (seats <= 0) {
+            changeState(HOPEFUL, ELIMINATED);
             return;
         }
         changed = false;
         int elected = 0;
         int iteration = 1;
-        while(count(ELECTED) < seats) {
+        while (count(ELECTED) < seats) {
             sys.printlnDebug("Iteration " + iteration);
             iteration++;
-            if(iteration == 1)
+            if (iteration == 1)
                 reCalc(seats);
             else {
                 iterateOne(seats);
@@ -123,60 +123,57 @@ public class STV {
             reverseRandom();
         }
         sys.printlnDebug("All seats full");
-        changeState(HOPEFUL,ELIMINATED);
+        changeState(HOPEFUL, ELIMINATED);
     }
-    
-    void iterateOne(int seats) {
+
+    private void iterateOne(int seats) {
         // assume that: (count(ELECTED) < seats)
-        if(count(ELECTED+HOPEFUL) <= seats) {
+        if (count(ELECTED + HOPEFUL) <= seats) {
             sys.printlnDebug("All remaining candidates elected");
-            changeState(HOPEFUL,ELECTED);
+            changeState(HOPEFUL, ELECTED);
             return;
         }
-        
+
         changed = false;
         convergeOne(seats);
-        if((!changed) && surplus.compareTo(quotaErrorMargin)<0) {
+        if ((!changed) && surplus.compareTo(quotaErrorMargin) < 0) {
             sys.printlnDebug("Remove Lowest (forced)");
             excludeLowest();
         }
     }
-    
-    void reCalc(int seats) {
+
+    private void reCalc(int seats) {
         calcTotals();
         calcAheads();
-        if(sys.debug())displayTables();
+        if (sys.debug()) displayTables();
         calcQuota(seats);
         elect(seats);
         calcSurplus();
-        if(tryRemoveLowest(seats)) {
-            return;
-        }
+        tryRemoveLowest(seats);
     }
 
-    void calcTotals() {
-        for(int i=0; i<numCandidates; i++) {
+    private void calcTotals() {
+        for (int i = 0; i < numCandidates; i++) {
             candVote[i] = zero;
         }
         excess = zero;
-        for(int i=0; i<numVoters; i++) {
+        for (int i = 0; i < numVoters; i++) {
             BigDecimal vote = one;
-            for(int rank=0; (rank<numCandidates)
-                            && (table.ranks[i][rank] >= 0)
-                            && (vote.compareTo(zero)>0); rank++) {
+            for (int rank = 0; (rank < numCandidates)
+                    && (table.ranks[i][rank] >= 0)
+                    && (vote.compareTo(zero) > 0); rank++) {
                 int c = table.ranks[i][rank];
                 // we don't do the next operations of the candidate is eliminated
                 // there is also a shortened form if the candidate is hopeful
                 // this makes no logical difference, but avoids slow BigDecimal operations
                 // This is the slowest part of the whole program, so it is worth taking some pains
-                if(HOPEFUL == candStatus[c]) {
+                if (HOPEFUL == candStatus[c]) {
                     candVote[c] = candVote[c].add(vote);
                     vote = zero;
                     rank = numCandidates; // done, so bail out of next iteration of loop
-                } else if(ELIMINATED != candStatus[c])
-                {
+                } else if (ELIMINATED != candStatus[c]) {
                     BigDecimal w = candWeight[c];
-                    BigDecimal wv = w.multiply(vote).setScale(DP,ROUND_UP);
+                    BigDecimal wv = w.multiply(vote).setScale(DP, ROUND_UP);
                     candVote[c] = candVote[c].add(wv);
                     vote = vote.subtract(wv);
                 }
@@ -185,8 +182,8 @@ public class STV {
         }
     }
 
-    void calcAheads() {
-        
+    private void calcAheads() {
+
         class SortAtom {
             int index;
             int ahead;
@@ -197,11 +194,11 @@ public class STV {
                 ahead = a;
                 vote = v;
             }
-            
+
             int compareTo(SortAtom b) {
-                if(ahead < b.ahead)
+                if (ahead < b.ahead)
                     return -1;
-                else if(ahead == b.ahead)
+                else if (ahead == b.ahead)
                     return vote.compareTo(b.vote);
                 else
                     return 1;
@@ -211,29 +208,27 @@ public class STV {
         // Do insertion sort here - horribly inefficient, but this is not time critical
         // Anyone suggest a nice way of deaing with sorting that still works with JDK 1.1?
         SortAtom[] sort = new SortAtom[numCandidates];
-        for(int i=0; i<numCandidates; i++) {
-            SortAtom thisatom = new SortAtom(i,ahead[i],candVote[i]);
+        for (int i = 0; i < numCandidates; i++) {
+            SortAtom thisatom = new SortAtom(i, ahead[i], candVote[i]);
             // find the place to insert
-            int place=0;
-            while((place<i) && (thisatom.compareTo(sort[place])>0))
+            int place = 0;
+            while ((place < i) && (thisatom.compareTo(sort[place]) > 0))
                 place++;
-            
+
             // make sure that space is clear
-            for(int j=i-1; j>=place; j--)
-                sort[j+1] = sort[j];
+            System.arraycopy(sort, place, sort, place + 1, i - place);
             sort[place] = thisatom;
         }
-        
+
         // now recalculate the ahead values
-        if(numCandidates>0)
-        {
+        if (numCandidates > 0) {
             int lastplace = 0;
             SortAtom lastvalue = sort[0];
-            for(int i=0; i<=numCandidates; i++) {
-                if((i == numCandidates) || (sort[i].compareTo(lastvalue)!=0)) {
-                    for(int j=lastplace; j<i; j++)
-                        ahead[sort[j].index] = (i-1)+lastplace;
-                    if(i < numCandidates) {
+            for (int i = 0; i <= numCandidates; i++) {
+                if ((i == numCandidates) || (sort[i].compareTo(lastvalue) != 0)) {
+                    for (int j = lastplace; j < i; j++)
+                        ahead[sort[j].index] = (i - 1) + lastplace;
+                    if (i < numCandidates) {
                         lastplace = i;
                         lastvalue = sort[i];
                     }
@@ -241,167 +236,162 @@ public class STV {
             }
         }
     }
-    
-    void displayTables() {
+
+    private void displayTables() {
         BigDecimal total = excess;
-        for(int i=0; i<numCandidates; i++) {
+        for (int i = 0; i < numCandidates; i++) {
             sys.printlnDebug(
-                Util.toStringPadded(table.getCandidate(i),20)
-                + " " + Util.toStringBigDecPadded(candWeight[i],NUMWIDTH,DP)
-                + " " + Util.toStringBigDecPadded(candVote[i],NUMWIDTH,DP)
-                //+ " " + Util.toStringIntPadded(ahead[i],5)
-                //+ " " + Util.toStringIntPadded(candRand[i],5)
-                );
+                    Util.toStringPadded(table.getCandidate(i), 20)
+                            + " " + Util.toStringBigDecPadded(candWeight[i], NUMWIDTH, DP)
+                            + " " + Util.toStringBigDecPadded(candVote[i], NUMWIDTH, DP)
+                    //+ " " + Util.toStringIntPadded(ahead[i],5)
+                    //+ " " + Util.toStringIntPadded(candRand[i],5)
+            );
             total = total.add(candVote[i]);
         }
         sys.printlnDebug("Non-transferable                     "
-            + Util.toStringBigDecPadded(excess,NUMWIDTH,DP));
+                + Util.toStringBigDecPadded(excess, NUMWIDTH, DP));
         sys.printlnDebug("Total                                "
-            + Util.toStringBigDecPadded(total,NUMWIDTH,DP));
+                + Util.toStringBigDecPadded(total, NUMWIDTH, DP));
     }
 
-    void calcQuota(int seats) {
-        if(seats>2)
+    private void calcQuota(int seats) {
+        if (seats > 2)
             quota = (BigDecimal.valueOf(numVoters).subtract(excess))
-                    .divide(BigDecimal.valueOf(seats+1),DP,ROUND_DOWN).add(billionth);
+                    .divide(BigDecimal.valueOf(seats + 1), DP, ROUND_DOWN).add(billionth);
         else
             quota = (BigDecimal.valueOf(numVoters).subtract(excess))
-                    .divide(BigDecimal.valueOf(seats+1),DP,ROUND_UP);
-        if(quota.compareTo(quotaErrorMargin)<0)
+                    .divide(BigDecimal.valueOf(seats + 1), DP, ROUND_UP);
+        if (quota.compareTo(quotaErrorMargin) < 0)
             throw new IllegalStateException("Internal Error - very low quota");
         sys.printlnDebug("Quota = " + quota);
     }
 
-    boolean elect(int seats) {
+    private void elect(int seats) {
         boolean electOne = false;
-        for(int i=0; i<numCandidates; i++) {
-            if((HOPEFUL == candStatus[i]) && (candVote[i].compareTo(quota) >= 0)) {
+        for (int i = 0; i < numCandidates; i++) {
+            if ((HOPEFUL == candStatus[i]) && (candVote[i].compareTo(quota) >= 0)) {
                 candStatus[i] = ALMOST;
                 electOne = true;
             }
-        }        
-        while(count(ELECTED+ALMOST) > seats) {
-            sys.printlnDebug("Vote tiebreaker! voters:" + count(ELECTED+ALMOST) + " seats:" + seats);
-            changeState(HOPEFUL,ELIMINATED);
+        }
+        while (count(ELECTED + ALMOST) > seats) {
+            sys.printlnDebug("Vote tiebreaker! voters:" + count(ELECTED + ALMOST) + " seats:" + seats);
+            changeState(HOPEFUL, ELIMINATED);
             excludeLowest();
         }
-        changeState(ALMOST,ELECTED);
-        return electOne;
+        changeState(ALMOST, ELECTED);
     }
-        
-    void calcSurplus() {
+
+    private void calcSurplus() {
         surplus = zero;
-        for(int i=0; i<numCandidates; i++) {
-            if(ELECTED == candStatus[i])
+        for (int i = 0; i < numCandidates; i++) {
+            if (ELECTED == candStatus[i])
                 surplus = surplus.add(candVote[i].subtract(quota));
         }
         sys.printlnDebug("Total Surplus = " + surplus);
     }
-    
-    boolean tryRemoveLowest(int seats) {
-        BigDecimal lowest=reallyBig;
+
+    private void tryRemoveLowest(int seats) {
+        BigDecimal lowest = reallyBig;
         int index = -1;
-        for(int i=0; i<numCandidates; i++) {
-            if((candStatus[i] == HOPEFUL) && (candVote[i].compareTo(lowest)<0)) {
+        for (int i = 0; i < numCandidates; i++) {
+            if ((candStatus[i] == HOPEFUL) && (candVote[i].compareTo(lowest) < 0)) {
                 lowest = candVote[i];
                 index = i;
             }
         }
-        BigDecimal lowest2nd=reallyBig;
-        for(int i=0; i<numCandidates; i++) {
-            if((i != index) && (candStatus[i] != ELIMINATED) && (candVote[i].compareTo(lowest2nd)<0)) {
+        BigDecimal lowest2nd = reallyBig;
+        for (int i = 0; i < numCandidates; i++) {
+            if ((i != index) && (candStatus[i] != ELIMINATED) && (candVote[i].compareTo(lowest2nd) < 0)) {
                 lowest2nd = candVote[i];
             }
         }
         BigDecimal lowestDifference = lowest2nd.subtract(lowest);
-        if(lowestDifference.compareTo(zero)>=0) {
+        if (lowestDifference.compareTo(zero) >= 0) {
             sys.printlnDebug("Lowest Difference = " + lowest2nd + " - " + lowest + " = " + lowestDifference);
         }
-        if(lowestDifference.compareTo(surplus)>0) {
+        if (lowestDifference.compareTo(surplus) > 0) {
             sys.printlnDebug("Remove Lowest (unforced)");
             eliminateOne(index);
-            return true;
         }
-        else
-            return false;
     }
 
-    void convergeOne(int seats) {
-        for(int i=0; i<numCandidates; i++) {
-            if(ELECTED == candStatus[i]) {
-                candWeight[i] = (candWeight[i].multiply(quota).setScale(DP,ROUND_UP))
-                                    .divide(candVote[i],DP,ROUND_UP);
+    private void convergeOne(int seats) {
+        for (int i = 0; i < numCandidates; i++) {
+            if (ELECTED == candStatus[i]) {
+                candWeight[i] = (candWeight[i].multiply(quota).setScale(DP, ROUND_UP))
+                        .divide(candVote[i], DP, ROUND_UP);
             }
         }
         reCalc(seats);
     }
-    
-    void excludeLowest() {
+
+    private void excludeLowest() {
         int aheadsf = 1000000000;
         int randsf = 10000;
         int excludesf = -1;
         boolean useRandom = false;
-        for(int i=0; i<numCandidates; i++) {
-            if((HOPEFUL == candStatus[i]) || (ALMOST == candStatus[i])) {
-                if(ahead[i] < aheadsf) {
+        for (int i = 0; i < numCandidates; i++) {
+            if ((HOPEFUL == candStatus[i]) || (ALMOST == candStatus[i])) {
+                if (ahead[i] < aheadsf) {
                     aheadsf = ahead[i];
                     randsf = candRand[i];
                     excludesf = i;
                     useRandom = false;
-                }
-                else if(ahead[i] == aheadsf) {
+                } else if (ahead[i] == aheadsf) {
                     useRandom = true;
-                    if(candRand[i] < randsf) {
+                    if (candRand[i] < randsf) {
                         randsf = candRand[i];
                         excludesf = i;
                     }
                 }
             }
         }
-        if(useRandom) {
+        if (useRandom) {
             sys.printlnDebug("Random choice used!");
         }
         eliminateOne(excludesf);
     }
 
-    void reverseRandom() {
-        for(int i=0; i<numCandidates; i++) {
-            candRand[i] = 10000-candRand[i];
+    private void reverseRandom() {
+        for (int i = 0; i < numCandidates; i++) {
+            candRand[i] = 10000 - candRand[i];
         }
     }
 
-    int count(int state) {
+    private int count(int state) {
         int count = 0;
-        for(int i=0; i<numCandidates; i++) {
-            if(0 != (state & candStatus[i]))
+        for (int i = 0; i < numCandidates; i++) {
+            if (0 != (state & candStatus[i]))
                 count++;
         }
         return count;
     }
-    
-    void changeState(int from, int to) {
-        for(int i=0; i<numCandidates; i++) {
-            if(0 != (from & candStatus[i])) {
+
+    private void changeState(int from, int to) {
+        for (int i = 0; i < numCandidates; i++) {
+            if (0 != (from & candStatus[i])) {
                 candStatus[i] = to;
                 // the next two ifs just for the messages
-                if(ELECTED == to) {
+                if (ELECTED == to) {
                     electOne(i);
                 }
-                if(ELIMINATED == to) {
+                if (ELIMINATED == to) {
                     eliminateOne(i);
                 }
             }
         }
     }
 
-    public void eliminateOne(int i) {
+    private void eliminateOne(int i) {
         candStatus[i] = ELIMINATED;
         candWeight[i] = zero;
         changed = true;
         sys.printlnDebug("Eliminated: " + table.getCandidate(i));
     }
-        
-    public void electOne(int i) {
+
+    private void electOne(int i) {
         candStatus[i] = ELECTED;
         changed = true;
         sys.printlnDebug("Elected: " + table.getCandidate(i));

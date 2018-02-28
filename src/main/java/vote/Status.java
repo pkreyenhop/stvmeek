@@ -20,46 +20,46 @@ package vote;
 import java.io.*;
 
 public class Status {
-    boolean mDebug;
-    boolean mProgress;
-	boolean mStrictLegal;
-	boolean mStrictRankMin;
-	int mRankMin;
-    public PrintWriter out;
-    public PrintWriter err;
-    char[] b = new char[1];
-    
+    final boolean mStrictLegal;
+    final boolean mStrictRankMin;
+    private final boolean mDebug;
+    private final boolean mProgress;
+    private final PrintWriter out;
+    private final PrintWriter err;
+    private final char[] b = new char[1];
+    int mRankMin;
+
     public Status(Parameters params) {
-        String s_debug = params.extract("debug","false").toLowerCase();
-        String s_progress = params.extract("log","false").toLowerCase();
-        String s_nostrict_legal = params.extract("nostrict-legal","false").toLowerCase();
-        String s_nostrict_rankmin = params.extract("nostrict-min-ranks","false").toLowerCase();
-        mDebug = (s_debug.compareTo("true")==0);
-        mProgress = (s_progress.compareTo("true")==0);
-        mStrictLegal = !(s_nostrict_legal.compareTo("true")==0);
-        mStrictRankMin = !(s_nostrict_rankmin.compareTo("true")==0);
-        mRankMin = Integer.valueOf(params.extract("min-ranks","1")).intValue();
-		if(mRankMin<1)
-			mRankMin=1;
-		String outputfile = params.extract("output","");
-        String logfile = params.extract("logfile","");
-        out = setOutput(outputfile,System.out);
-        err = setOutput(logfile,System.err);
+        String s_debug = params.extract("debug", "false").toLowerCase();
+        String s_progress = params.extract("log", "false").toLowerCase();
+        String s_nostrict_legal = params.extract("nostrict-legal", "false").toLowerCase();
+        String s_nostrict_rankmin = params.extract("nostrict-min-ranks", "false").toLowerCase();
+        mDebug = (s_debug.compareTo("true") == 0);
+        mProgress = (s_progress.compareTo("true") == 0);
+        mStrictLegal = !(s_nostrict_legal.compareTo("true") == 0);
+        mStrictRankMin = !(s_nostrict_rankmin.compareTo("true") == 0);
+        mRankMin = Integer.valueOf(params.extract("min-ranks", "1"));
+        if (mRankMin < 1)
+            mRankMin = 1;
+        String outputfile = params.extract("output", "");
+        String logfile = params.extract("logfile", "");
+        out = setOutput(outputfile, System.out);
+        err = setOutput(logfile, System.err);
     }
-    
-    public PrintWriter setOutput(String filename, OutputStream outstream) {
+
+    private PrintWriter setOutput(String filename, OutputStream outstream) {
         try {
-            if(new File(filename).exists()) {
+            if (new File(filename).exists()) {
                 b[0] = 'n';
                 System.out.print("File " + filename + " exists, overwrite (y/n)?");
-                new InputStreamReader(System.in).read(b,0,1);
-                if(('y' != b[0]) && ('Y' != b[0]))
+                new InputStreamReader(System.in).read(b, 0, 1);
+                if (('y' != b[0]) && ('Y' != b[0]))
                     filename = "";
             }
-            if(filename.compareTo("") == 0)
-                return new PrintWriter(outstream,true);
+            if (filename.compareTo("") == 0)
+                return new PrintWriter(outstream, true);
             else
-                return new PrintWriter(new FileWriter(filename),true);
+                return new PrintWriter(new FileWriter(filename), true);
         } catch (IOException e) {
             throw new IllegalArgumentException(e.getMessage());
         }
@@ -68,33 +68,33 @@ public class Status {
     public boolean debug() {
         return mDebug;
     }
-    
-    public boolean progress() {
+
+    private boolean progress() {
         return mProgress;
     }
-    
+
     public void warning(boolean fatal, String s) {
-		err.println(s);
-		if(fatal)
-			throw(new IllegalArgumentException(s));
-	}
-	
+        err.println(s);
+        if (fatal)
+            throw (new IllegalArgumentException(s));
+    }
+
     public void error(String s) {
-		warning(true,s);
-	}
-	
-	public void printlnDebug(String s) {
-        if(debug())
+        warning(true, s);
+    }
+
+    public void printlnDebug(String s) {
+        if (debug())
             err.println(s);
     }
 
     public void printDebug(String s) {
-        if(debug())
+        if (debug())
             err.print(s);
     }
 
     public void printlnLog(String s) {
-        if(progress())
+        if (progress())
             err.println(s);
     }
 

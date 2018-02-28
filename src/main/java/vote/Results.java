@@ -17,27 +17,9 @@
 
 package vote;
 
-import java.io.*;
+class Results {
+    private int[] candList;
+    private String[] candStrings;
+    private int numCand;
 
-public class Results {
-    int[] candList;
-    String[] candStrings;
-    int numCand;
-    
-    Results(int number) {
-        numCand = number;
-        candList = new int[numCand];
-        candStrings = new String[numCand];
-        for(int i=0; i< numCand; i++) {
-            candList[i] = -1;
-        }
-    }
-    
-    public void print(Status sys) {
-        sys.printlnOut("Results: (Rank,Candidate)");
-	    for(int i=0; i<numCand; i++) {
-            if(candList[i] != -1)
-                sys.printlnOut(Util.toStringIntPadded(i+1,5) + " " + candStrings[i]);
-        }
-    }
 }

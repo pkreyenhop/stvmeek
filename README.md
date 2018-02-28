@@ -1,6 +1,9 @@
 stvmeek
 =======
 
+stvmeek is based on
+
+
 Building with maven
 ```
 mvn clean install
@@ -9,7 +12,7 @@ mvn clean install
 Sample invocation
 
 ```
-java -cp target/stvmeek-1.0-SNAPSHOT.jar VoteMain -system stv-meek -seats 3 examples/colours-cand.csv
+java -cp target/stvmeek-1.0-SNAPSHOT.jar VoteMain -seats 3 examples/colours-cand.csv
 ```
 
 Sample output

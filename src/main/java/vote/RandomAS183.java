@@ -19,18 +19,20 @@ package vote;
 
 class RandomAS183 {
 
-    int x,y,z;
-    
+    private int x;
+    private int y;
+    private int z;
+
     public RandomAS183(int px, int py, int pz) {
         x = px;
         y = py;
         z = pz;
     }
-    
+
     int random() {
-        x = (171*x)%30269;
-        y = (172*y)%30307;
-        z = (170*z)%30323;
-        return 10000 - ((10000*x)/30269 + (10000*y)/30307 + (10000*z)/30323) % 10000;
+        x = (171 * x) % 30269;
+        y = (172 * y) % 30307;
+        z = (170 * z) % 30323;
+        return 10000 - ((10000 * x) / 30269 + (10000 * y) / 30307 + (10000 * z) / 30323) % 10000;
     }
 }
